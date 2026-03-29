@@ -359,6 +359,32 @@ class Scheduler:
             result = [t for t in result if t in pet_tasks]
         return result
 
+    def detect_conflicts(self, pet: Pet, day_name: str) -> list[str]:
+        """Detect scheduling conflicts for a pet on a given day.
+        Returns a list of warning messages rather than raising errors."""
+        warnings = []
+        availability = self.owner.availability.get(day_name, {})
+
+        # Group tasks by time slot
+        slot_groups: dict[str, list[Task]] = {}
+        for task in pet.tasks:
+            if task.is_conditional or task.time_slot == "flexible":
+                continue
+            slot_groups.setdefault(task.time_slot, []).append(task)
+
+        # Check each slot for overflow
+        for slot, tasks in slot_groups.items():
+            total = sum(t.duration for t in tasks)
+            available = availability.get(slot, 0)
+            if total > available:
+                task_names = ", ".join(t.name for t in tasks)
+                warnings.append(
+                    f"⚠ Conflict in '{slot}' for {pet.name}: "
+                    f"{total} min of tasks ({task_names}) "
+                    f"exceeds {available} min available."
+                )
+        return warnings
+
     def flag_conflicts(self) -> list[Task]:
         """Return the list of tasks that could not be scheduled."""
         return self.flagged_tasks
