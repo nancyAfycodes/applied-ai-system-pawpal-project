@@ -237,6 +237,22 @@ class Scheduler:
             key=lambda t: (order.get(t.priority, 99), t.duration),
         )
 
+    def _find_slot(
+        self,
+        task: Task,
+        candidates: list[str],
+        remaining_time: dict[str, int],
+        assignments: dict[str, list[Task]],
+    ) -> bool:
+        """Try to fit a task into the first candidate slot with enough time.
+        Returns True if assigned, False if no slot was available."""
+        for slot in candidates:
+            if slot in remaining_time and remaining_time[slot] >= task.duration:
+                assignments[slot].append(task)
+                remaining_time[slot] -= task.duration
+                return True
+        return False
+
     def assign_time_slots(
         self,
         tasks: list[Task],
@@ -259,23 +275,10 @@ class Scheduler:
             slot_order.insert(0, preferred_slot)
 
         for task in tasks:
-            # Skip conditional tasks unless flagging logic handles them separately
             if task.is_conditional:
                 continue
-
-            assigned = False
-            target = task.time_slot if task.time_slot != "flexible" else None
-
-            # Try preferred/fixed slot first
-            candidates = [target] if target else slot_order
-            for slot in candidates:
-                if slot in remaining_time and remaining_time[slot] >= task.duration:
-                    assignments[slot].append(task)
-                    remaining_time[slot] -= task.duration
-                    assigned = True
-                    break
-
-            if not assigned:
+            candidates = [task.time_slot] if task.time_slot != "flexible" else slot_order
+            if not self._find_slot(task, candidates, remaining_time, assignments):
                 self.flagged_tasks.append(task)
 
         return assignments
