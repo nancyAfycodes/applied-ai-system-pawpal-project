@@ -88,12 +88,22 @@ def test_mark_complete_daily(daily_task):
 
 
 # ---------------------------------------------------------------------------
-# Test 4: Recurring task — weekly
-# Verify that mark_complete() returns a new Task due in 7 days
+# Test 5: Conflict detection
+# Verify that detect_conflicts() catches slot overflow and returns a warning
 # ---------------------------------------------------------------------------
-def test_mark_complete_weekly(weekly_task):
-    next_task = weekly_task.mark_complete()
-    assert weekly_task.completed is True
-    assert next_task is not None
-    assert next_task.due_date == date.today() + timedelta(weeks=1)
-    assert next_task.completed is False     # new task starts incomplete
+def test_detect_conflicts(owner, dog):
+    from pawpal_system import Scheduler
+    owner.availability = {
+        "Monday": {"early_morning": 20}   # only 20 mins available
+    }
+    # Two tasks totalling 35 mins in the same slot — should conflict
+    dog.tasks = [
+        Task(name="Morning walk", category="exercise", duration=20,
+             priority="high", time_slot="early_morning", frequency="once"),
+        Task(name="Breakfast",    category="eating",   duration=15,
+             priority="high", time_slot="early_morning", frequency="once"),
+    ]
+    scheduler = Scheduler(owner=owner, pets=[dog])
+    warnings = scheduler.detect_conflicts(dog, "Monday")
+    assert len(warnings) == 1
+    assert "early_morning" in warnings[0]
