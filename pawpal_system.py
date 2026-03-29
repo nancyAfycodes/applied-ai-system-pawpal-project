@@ -105,7 +105,7 @@ VALID_TIME_SLOTS = {
     "flexible",
 }
 
-VALID_FREQUENCIES = {"once", "twice", "weekly"}
+VALID_FREQUENCIES = {"once", "twice", "daily", "weekly"}
 
 
 class Task:
@@ -120,19 +120,46 @@ class Task:
         time_slot: str = "flexible",
         frequency: str = "once",
         is_conditional: bool = False,
+        due_date: Optional[date] = None,
     ):
         self.name = name
-        self.category = category        # eating | exercise | grooming | enrichment | routine_med | conditional_med
-        self.duration = duration        # minutes
-        self.priority = priority        # high | medium | low
-        self.time_slot = time_slot      # early_morning | lunch_break | afternoon | evening | flexible
-        self.frequency = frequency      # once | twice | weekly
+        self.category = category
+        self.duration = duration
+        self.priority = priority
+        self.time_slot = time_slot
+        self.frequency = frequency
         self.completed = False
-        self.is_conditional = is_conditional  # True = only active when pet is sick
+        self.is_conditional = is_conditional
+        self.due_date = due_date or date.today()  # defaults to today if not set
 
-    def mark_complete(self):
-        """Mark this task as completed."""
+    def mark_complete(self) -> Optional["Task"]:
+        """Mark this task as completed and return a new Task instance if it recurs.
+        Returns a new Task due tomorrow (daily) or in 7 days (weekly), or None if once/twice."""
+        from datetime import timedelta
         self.completed = True
+        if self.frequency == "daily":
+            return Task(
+                name=self.name,
+                category=self.category,
+                duration=self.duration,
+                priority=self.priority,
+                time_slot=self.time_slot,
+                frequency=self.frequency,
+                is_conditional=self.is_conditional,
+                due_date=self.due_date + timedelta(days=1),
+            )
+        if self.frequency == "weekly":
+            return Task(
+                name=self.name,
+                category=self.category,
+                duration=self.duration,
+                priority=self.priority,
+                time_slot=self.time_slot,
+                frequency=self.frequency,
+                is_conditional=self.is_conditional,
+                due_date=self.due_date + timedelta(weeks=1),
+            )
+        return None
 
     def __repr__(self):
         return (
@@ -302,6 +329,35 @@ class Scheduler:
                 self.flagged_tasks.append(task)
 
         return assignments
+
+    def sort_by_time(self, tasks: list[Task]) -> list[Task]:
+        """Sort tasks by natural day order: early_morning → lunch_break → afternoon → evening."""
+        slot_order = {
+            "early_morning": 0,
+            "lunch_break":   1,
+            "afternoon":     2,
+            "evening":       3,
+            "flexible":      4,
+        }
+        return sorted(tasks, key=lambda t: slot_order.get(t.time_slot, 99))
+
+    def filter_tasks(
+        self,
+        tasks: list[Task],
+        completed: Optional[bool] = None,
+        pet_name: Optional[str] = None,
+    ) -> list[Task]:
+        """Filter tasks by completion status and/or pet name."""
+        result = tasks
+        if completed is not None:
+            result = [t for t in result if t.completed == completed]
+        if pet_name is not None:
+            pet_tasks = {
+                t for p in self.pets if p.name.lower() == pet_name.lower()
+                for t in p.tasks
+            }
+            result = [t for t in result if t in pet_tasks]
+        return result
 
     def flag_conflicts(self) -> list[Task]:
         """Return the list of tasks that could not be scheduled."""
