@@ -29,7 +29,7 @@
 
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
-- As I stated above, I flagged priority tasks rather than lower it. This forces the pet owner to weigh each task(s) and determine which, even though important, can be completed at a later time without having any adverse effect to the overall well-being of the pet. 
+- As I stated above, I flagged priority tasks rather than lower it. This forces the pet owner to weigh each task(s) and determine which, even though important, can be completed at a later time without having any adverse effect to the overall well-being of the pet.However, once I ran pawpal_system.py file, it flagged each tasks due to conflict. Therefore, I had to create a separate section that generates a schedule per pet that generates a schedule for each pet, based on owner availability,  rather than a general schedule for each pet.
 ---
 
 ## 3. AI Collaboration
