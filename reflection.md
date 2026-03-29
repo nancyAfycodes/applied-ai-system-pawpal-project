@@ -6,6 +6,8 @@
 
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
+- I think the three main core actions a user is a weekly calender that involves daily actions, depending on the user's schedule, including walking time for the dog, feeding schedule and select pet name; this only applies if the user has more than one dog. Lastly, a check-off list that states if day's tasks have been accomplished
+- The classes will user, with attributes like pet name and schedule and user availability. For the pet, it will include pet name(s), daily tasks like walking, eating, rest time
 
 **b. Design changes**
 
