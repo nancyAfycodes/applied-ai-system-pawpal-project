@@ -283,7 +283,7 @@ class Scheduler:
         assignments: dict[str, list[Task]] = {
             s: [] for s in ["early_morning", "lunch_break", "afternoon", "evening"]
         }
-        remaining_time = {slot: mins for slot, mins in availability.items()}
+        remaining_time = dict(availability)
 
         slot_order = list(remaining_time.keys())
         if preferred_slot and preferred_slot in slot_order:
