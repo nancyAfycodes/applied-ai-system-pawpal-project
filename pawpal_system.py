@@ -130,6 +130,10 @@ class Task:
         self.completed = False
         self.is_conditional = is_conditional  # True = only active when pet is sick
 
+    def mark_complete(self):
+        """Mark this task as completed."""
+        self.completed = True
+
     def __repr__(self):
         return (
             f"Task(name={self.name!r}, priority={self.priority!r}, "
