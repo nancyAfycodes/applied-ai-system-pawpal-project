@@ -95,6 +95,23 @@ py -m pytest
 | `test_sort_by_time` | Tasks returned in natural day order |
 | `test_pet_with_no_tasks` | Pet with no tasks produces no errors or conflicts |
 
+## System Architecture
+
+### Initial UML Design
+![Initial UML](uml_initial.png)
+
+### Final UML Design
+![Final UML](uml_final.png)
+
+> Both diagrams were generated using [Mermaid](https://mermaid.live). 
+> See `uml_diagrams.docx` for the full Mermaid code to recreate them.
+
+## Demo (screen shot)
+![alt text](image.png)
+![alt text](image-1.png)
+![alt text](image-2.png)
+![alt text](image-3.png)
+
 ### Confidence level
 
 ⭐⭐⭐⭐ (4/5) — Core scheduling behaviors are well covered. Future improvements include tests for multi-pet scheduling and the actual vs scheduled time tracking feature.
