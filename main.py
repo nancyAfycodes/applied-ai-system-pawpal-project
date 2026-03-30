@@ -1,5 +1,6 @@
 from datetime import date
-from pawpal_system import Owner, Dog, Cat, Task, Scheduler
+from tabulate import tabulate
+from pawpal_system import Owner, Dog, Cat, Task, Scheduler, CATEGORY_EMOJI, PRIORITY_BADGE
 
 # ---------------------------------------------------------------------------
 # 1. Create Owner
@@ -8,7 +9,7 @@ owner = Owner(name="Alex")
 
 owner.availability = {
     "Sunday": {
-        "early_morning": 30,
+        "early_morning": 60,
         "lunch_break":   60,
         "afternoon":     45,
         "evening":       60,
@@ -60,71 +61,86 @@ luna = Cat(
 # 3. Add Tasks to Pets
 # ---------------------------------------------------------------------------
 buddy.tasks = [
-    Task(name="Morning walk",     category="exercise",     duration=30, priority="high",   time_slot="early_morning", frequency="once"),
-    Task(name="Breakfast",        category="eating",       duration=15, priority="high",   time_slot="early_morning", frequency="once"),
-    Task(name="Fish oil vitamin", category="routine_med",  duration=5,  priority="medium", time_slot="early_morning", frequency="once"),
-    Task(name="Afternoon walk",   category="exercise",     duration=30, priority="medium", time_slot="afternoon",     frequency="once"),
-    Task(name="Dinner",           category="eating",       duration=15, priority="high",   time_slot="evening",       frequency="once"),
+    Task(name="Morning walk",     category="exercise",    duration=30, priority="high",   time_slot="early_morning", frequency="daily"),
+    Task(name="Breakfast",        category="eating",      duration=15, priority="high",   time_slot="early_morning", frequency="daily"),
+    Task(name="Fish oil vitamin", category="routine_med", duration=5,  priority="medium", time_slot="early_morning", frequency="daily"),
+    Task(name="Afternoon walk",   category="exercise",    duration=30, priority="medium", time_slot="afternoon",     frequency="daily"),
+    Task(name="Dinner",           category="eating",      duration=15, priority="high",   time_slot="evening",       frequency="daily"),
 ]
 
 luna.tasks = [
-    Task(name="Breakfast",           category="eating",    duration=10, priority="high",   time_slot="early_morning", frequency="once"),
-    Task(name="Litter box cleaning", category="grooming",  duration=10, priority="medium", time_slot="early_morning", frequency="once"),
-    Task(name="Playtime",            category="enrichment",duration=20, priority="medium", time_slot="afternoon",     frequency="once"),
-    Task(name="Dinner",              category="eating",    duration=10, priority="high",   time_slot="evening",       frequency="once"),
+    Task(name="Breakfast",           category="eating",     duration=10, priority="high",   time_slot="early_morning", frequency="daily"),
+    Task(name="Litter box cleaning", category="grooming",   duration=10, priority="medium", time_slot="early_morning", frequency="daily"),
+    Task(name="Playtime",            category="enrichment", duration=20, priority="medium", time_slot="afternoon",     frequency="daily"),
+    Task(name="Dinner",              category="eating",     duration=10, priority="high",   time_slot="evening",       frequency="daily"),
 ]
 
 # ---------------------------------------------------------------------------
-# 4. Run Scheduler — separate schedule per pet
+# 4. Helpers
+# ---------------------------------------------------------------------------
+SLOT_LABELS = {
+    "early_morning": "🌅 Early Morning",
+    "lunch_break":   "☀️  Lunch Break",
+    "afternoon":     "🌤️  Afternoon",
+    "evening":       "🌙 Evening",
+}
+
+def build_schedule_table(daily: "DailySchedule") -> str:
+    rows = []
+    for slot, label in SLOT_LABELS.items():
+        tasks = daily.time_slots.get(slot, [])
+        if tasks:
+            for t in tasks:
+                emoji = CATEGORY_EMOJI.get(t.category, "📋")
+                status = "✅" if t.completed else "⭕"
+                rows.append([
+                    label,
+                    f"{emoji} {t.name}",
+                    f"{t.duration} min",
+                    PRIORITY_BADGE.get(t.priority, t.priority),
+                    status,
+                ])
+            label = ""  # only show slot label once per group
+    return tabulate(
+        rows,
+        headers=["Time Slot", "Task", "Duration", "Priority", "Status"],
+        tablefmt="rounded_outline",
+    )
+
+# ---------------------------------------------------------------------------
+# 5. Run Scheduler and Print
 # ---------------------------------------------------------------------------
 today = date.today()
 scheduler = Scheduler(owner=owner, pets=[buddy, luna])
 
-SLOTS = ["early_morning", "lunch_break", "afternoon", "evening"]
-SLOT_LABELS = {
-    "early_morning": "Early Morning",
-    "lunch_break":   "Lunch Break",
-    "afternoon":     "Afternoon",
-    "evening":       "Evening",
-}
-
-def print_pet_schedule(pet, daily, flagged):
-    print(f"\n{'=' * 50}")
-    print(f"  {pet.name} ({pet.__class__.__name__}) — {daily.day_of_week}, {today}")
-    print(f"{'=' * 50}")
-    for slot in SLOTS:
-        tasks = daily.time_slots.get(slot, [])
-        print(f"\n  [{SLOT_LABELS[slot]}]")
-        if tasks:
-            for t in tasks:
-                status = "✓" if t.completed else "○"
-                print(f"    {status} {t.name:<25} | {t.duration:>3} min | priority: {t.priority}")
-        else:
-            print("    — no tasks scheduled —")
-
-    scheduled = len(daily.tasks)
-    print(f"\n  Scheduled {scheduled} task(s).")
-    if flagged:
-        print("  ⚠ Flagged tasks (could not be scheduled):")
-        for t in flagged:
-            print(f"    • {t.name} ({t.priority} priority, {t.duration} min)")
-    print(f"{'=' * 50}")
-
-# ---------------------------------------------------------------------------
-# 5. Print each pet's schedule separately
-# ---------------------------------------------------------------------------
-print("\n  PawPal+ — Today's Schedule\n")
+print(f"\n  🐾 PawPal+ — Today's Schedule ({today.strftime('%A, %Y-%m-%d')})\n")
 
 for pet in [buddy, luna]:
-    scheduler.flagged_tasks = []  # reset flags per pet
+    scheduler.flagged_tasks = []
     daily = scheduler.generate_daily_schedule_for_pet(pet, today)
-    print_pet_schedule(pet, daily, scheduler.flagged_tasks)
+
+    species = "🐶" if isinstance(pet, Dog) else "🐱"
+    print(f"{'=' * 60}")
+    print(f"  {species} {pet.name} ({pet.__class__.__name__})")
+    print(f"{'=' * 60}")
+    print(build_schedule_table(daily))
+    print(f"\n  Scheduled: {len(daily.tasks)} task(s)")
+
+    if scheduler.flagged_tasks:
+        print(f"\n  ⚠️  Flagged (could not be scheduled):")
+        flagged_rows = [
+            [f"🔴 {t.name}", f"{t.duration} min", PRIORITY_BADGE.get(t.priority, t.priority)]
+            for t in scheduler.flagged_tasks
+        ]
+        print(tabulate(flagged_rows, headers=["Task", "Duration", "Priority"], tablefmt="rounded_outline"))
+    print()
 
 # ---------------------------------------------------------------------------
-# 6. Conflict Detection Demo
+# 6. Conflict Detection
 # ---------------------------------------------------------------------------
-print("\n  Conflict Detection")
-print("=" * 50)
+print(f"{'=' * 60}")
+print("  🔍 Conflict Detection")
+print(f"{'=' * 60}")
 today_name = today.strftime("%A")
 for pet in [buddy, luna]:
     conflicts = scheduler.detect_conflicts(pet, today_name)
@@ -132,5 +148,6 @@ for pet in [buddy, luna]:
         for warning in conflicts:
             print(f"  {warning}")
     else:
-        print(f"  No conflicts detected for {pet.name}.")
-print("=" * 50)
+        species = "🐶" if isinstance(pet, Dog) else "🐱"
+        print(f"  ✅ No conflicts detected for {species} {pet.name}.")
+print(f"{'=' * 60}\n")
