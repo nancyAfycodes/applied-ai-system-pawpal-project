@@ -103,19 +103,35 @@ def test_mark_complete_weekly(weekly_task):
 # Test 5: Conflict detection
 # Verify that detect_conflicts() catches slot overflow and returns a warning
 # ---------------------------------------------------------------------------
+def test_detect_conflicts(owner, dog):
+    owner.availability = {
+        "Monday": {"early_morning": 20}
+    }
+    dog.tasks = [
+        Task(name="Morning walk", category="exercise", duration=20,
+             priority="high", time_slot="early_morning", frequency="once"),
+        Task(name="Breakfast", category="eating", duration=15,
+             priority="high", time_slot="early_morning", frequency="once"),
+    ]
+    scheduler = Scheduler(owner=owner, pets=[dog])
+    warnings = scheduler.detect_conflicts(dog, "Monday")
+    assert len(warnings) == 1
+    assert "early_morning" in warnings[0]
+
+
 # ---------------------------------------------------------------------------
 # Test 6: Sorting correctness
 # Verify tasks are returned in natural day order
 # ---------------------------------------------------------------------------
 def test_sort_by_time(owner, dog):
     dog.tasks = [
-        Task(name="Dinner",       category="eating",    duration=15,
+        Task(name="Dinner",      category="eating",     duration=15,
              priority="high",   time_slot="evening",       frequency="once"),
-        Task(name="Playtime",     category="enrichment",duration=20,
+        Task(name="Playtime",    category="enrichment", duration=20,
              priority="medium", time_slot="afternoon",     frequency="once"),
-        Task(name="Breakfast",    category="eating",    duration=10,
+        Task(name="Breakfast",   category="eating",     duration=10,
              priority="high",   time_slot="early_morning", frequency="once"),
-        Task(name="Lunch snack",  category="eating",    duration=10,
+        Task(name="Lunch snack", category="eating",     duration=10,
              priority="medium", time_slot="lunch_break",   frequency="once"),
     ]
     scheduler = Scheduler(owner=owner, pets=[dog])
