@@ -9,6 +9,9 @@ import anthropic
 
 from pawpal_system import Pet, Dog, Cat, Task, Scheduler, DailySchedule
 
+# Set to True to use mock responses instead of real API calls
+MOCK_MODE = True
+
 # ---------------------------------------------------------------------------
 # Logging setup
 # ---------------------------------------------------------------------------
@@ -103,6 +106,46 @@ def _build_prompt(
 
 
 # ---------------------------------------------------------------------------
+# Mock response
+# ---------------------------------------------------------------------------
+def _mock_response(pet: Pet, daily: DailySchedule, conflicts: list[str]) -> str:
+    """Return a realistic mock AI explanation for testing without API credits."""
+    slot_summary = []
+    for slot, tasks in daily.time_slots.items():
+        if tasks:
+            task_list = ", ".join(t.name for t in tasks)
+            slot_summary.append(f"- {slot.replace('_', ' ').title()}: {task_list}")
+    schedule_text = "\n".join(slot_summary) if slot_summary else "No tasks scheduled."
+
+    conflict_note = ""
+    if conflicts:
+        conflict_note = f"\n\n⚠️ Conflict detected: {conflicts[0]} I recommend spreading tasks across additional time slots to resolve this."
+
+    return f"""## PawPal+ Schedule Analysis for {pet.name} ({pet.__class__.__name__})
+
+### Schedule Review
+{schedule_text}
+
+### Alignment with Care Guidelines
+The current schedule covers the essential care needs for {pet.name}. Here's a quick review:
+
+- **Feeding tasks** are correctly placed in the morning and evening slots, which aligns with the twice-daily feeding guideline for adult {'dogs' if isinstance(pet, Dog) else 'cats'}.
+- **Exercise tasks** are well distributed across the day, supporting physical and mental wellbeing.
+- **Medication/supplement tasks** are scheduled in the morning, which is the recommended time for consistency and absorption.
+{conflict_note}
+
+### Suggestions
+- Consider adding an enrichment or playtime task in the afternoon slot if time allows.
+- Ensure fresh water is always available alongside feeding tasks.
+- Keep task times consistent day-to-day to support {pet.name}'s routine and reduce anxiety.
+
+### Confidence Score
+Based on the schedule's alignment with care guidelines: **4/5**
+
+> 🤖 *This is a mock response for testing. Connect your Anthropic API key with credits to enable real AI analysis.*"""
+
+
+# ---------------------------------------------------------------------------
 # Agentic loop
 # ---------------------------------------------------------------------------
 def generate_ai_explanation(
@@ -127,6 +170,31 @@ def generate_ai_explanation(
     day_name = daily.date.strftime("%A")
     conflicts = scheduler.detect_conflicts(pet, day_name)
     conflict_warning = "\n".join(conflicts) if conflicts else None
+
+    # Use mock response if MOCK_MODE is enabled
+    if MOCK_MODE:
+        logging.info(f"Mock mode: returning mock response for {pet.name}")
+        explanation = _mock_response(pet, daily, conflicts)
+        confidence = _extract_confidence(explanation)
+        log_entry = {
+            "timestamp":       datetime.now().isoformat(),
+            "pet":             pet.name,
+            "species":         pet.__class__.__name__,
+            "day":             daily.date.strftime("%A"),
+            "tasks_scheduled": len(daily.tasks),
+            "conflicts":       conflicts,
+            "retries":         0,
+            "confidence":      confidence,
+            "success":         True,
+            "mock":            True,
+        }
+        _append_decision_log(log_entry)
+        return {
+            "explanation": explanation,
+            "confidence":  confidence,
+            "retries":     0,
+            "flagged":     conflicts,
+        }
 
     explanation = ""
     retries = 0
