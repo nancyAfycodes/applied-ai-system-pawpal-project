@@ -1,5 +1,6 @@
 import streamlit as st
 from pawpal_system import Owner, Dog, Cat, Task, Scheduler, CATEGORY_EMOJI, PRIORITY_BADGE
+from ai_engine import generate_ai_explanation, validate_schedule_safety
 from datetime import date
 
 # ---------------------------------------------------------------------------
@@ -180,6 +181,39 @@ if st.button("Generate schedule"):
                     )
             else:
                 st.caption("No tasks scheduled.")
+
+        st.divider()
+
+        # Guardrails — safety checks
+        safety_warnings = validate_schedule_safety(pet, daily)
+        if safety_warnings:
+            st.subheader("⚠️ Safety Checks")
+            for w in safety_warnings:
+                st.warning(w)
+
+        # AI explanation
+        st.subheader("🤖 AI Schedule Analysis")
+        with st.spinner("PawPal+ AI is reviewing the schedule..."):
+            result = generate_ai_explanation(pet, daily, scheduler)
+
+        # Confidence score
+        confidence = result["confidence"]
+        stars = "⭐" * confidence + "☆" * (5 - confidence)
+        st.markdown(f"**Schedule Confidence:** {stars} ({confidence}/5)")
+
+        # Flagged conflicts
+        if result["flagged"]:
+            st.warning("Conflicts detected and sent to AI for review:")
+            for conflict in result["flagged"]:
+                st.markdown(f"- {conflict}")
+
+        # AI explanation expander
+        with st.expander("📋 Full AI Explanation", expanded=True):
+            st.markdown(result["explanation"])
+
+        # Retry info
+        if result["retries"] > 1:
+            st.caption(f"ℹ️ AI refined its response after {result['retries']} attempt(s).")
 
         st.divider()
 
