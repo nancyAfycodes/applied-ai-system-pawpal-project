@@ -11,5 +11,19 @@
     "retries": 4,
     "confidence": 0,
     "success": false
+  },
+  {
+    "timestamp": "2026-04-16T11:21:51.697149",
+    "pet": "Gucci",
+    "species": "Dog",
+    "day": "Thursday",
+    "tasks_scheduled": 8,
+    "conflicts": [
+      "\u26a0 Conflict in 'early_morning' for Gucci: 40 min of tasks (Morning walk, Breakfast, Daily vitamins) exceeds 30 min available."
+    ],
+    "retries": 0,
+    "confidence": 4,
+    "success": true,
+    "mock": true
   }
 ]
