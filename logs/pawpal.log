@@ -1,0 +1,9 @@
+2026-04-16 10:57:49,409 | INFO | RAG: retrieved guidelines from dog_care.md
+2026-04-16 10:57:49,424 | INFO | Agentic loop: attempt 1 for Gucci
+2026-04-16 10:57:50,097 | INFO | HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 400 Bad Request"
+2026-04-16 10:57:50,098 | ERROR | Agentic loop: API error on attempt 1 — Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011Ca7tBPJSoBKoxZHVKjEu9'}
+2026-04-16 10:57:50,098 | INFO | Agentic loop: conflict detected, retrying with revision prompt for Gucci
+2026-04-16 10:57:50,098 | INFO | Agentic loop: attempt 3 for Gucci
+2026-04-16 10:57:50,222 | INFO | HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 400 Bad Request"
+2026-04-16 10:57:50,226 | ERROR | Agentic loop: API error on attempt 3 — Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011Ca7tBQMwmzbsVVeDAbkJf'}
+2026-04-16 10:57:50,242 | INFO | Decision logged for Gucci — confidence: 0/5
