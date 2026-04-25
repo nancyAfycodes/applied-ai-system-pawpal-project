@@ -151,3 +151,4 @@ The most consistent challenge was generated code with cognitive complexity score
 - Support non-standard work schedules (shift work, remote work, flexible hours)
 - Enable multi-pet weekly view in a single session
 - Activate real API integration once credits are available (`MOCK_MODE = False`)
+- Error message when exotic pets are added
