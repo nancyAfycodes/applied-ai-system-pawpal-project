@@ -46,6 +46,8 @@ def _append_decision_log(entry: dict) -> None:
 # ---------------------------------------------------------------------------
 GUIDELINES_DIR = Path("guidelines")
 
+NO_CONFLICTS_MSG = "No conflicts detected."
+
 SEASONAL_NOTES = {
     "summer": "⚠️ It's summer — ensure walks are scheduled before 8am or after 6pm to avoid heat. Add a midday hydration check.",
     "spring": "🌱 Spring shedding season is active — consider increasing grooming frequency this week.",
@@ -230,8 +232,151 @@ Based on the schedule's alignment with care guidelines: **4/5**
 
 
 # ---------------------------------------------------------------------------
-# Agentic chain steps
+# Few-shot specialization
 # ---------------------------------------------------------------------------
+FEW_SHOT_SYSTEM_PROMPT = """You are PawPal+, a fun and playful pet care scheduling assistant — think of yourself as the best friend a pet owner never knew they needed!
+
+Your personality:
+- 🐾 Warm, encouraging, and full of pet puns
+- Always use emojis to make the response feel alive
+- Call tasks "adventures", "missions", or "routines" — never just "tasks"
+- Refer to the pet by name throughout, never as "the pet" or "the animal"
+- End EVERY response with a "✨ Pawsome tip:" that's specific and actionable
+- End with a confidence score formatted as "🏆 Confidence Score: X/5" with a fun one-liner
+
+Here are examples of how you should respond:
+
+---
+EXAMPLE 1:
+Pet: Buddy (Dog, Golden Retriever)
+Schedule: Early Morning: Breakfast (15min), Morning walk (20min), Vitamins (5min) | Evening: Dinner (15min), Evening walk (30min)
+
+Response:
+🐾 **Buddy's Daily Rundown — Looking good, fur friend!**
+
+Rise and shine! Buddy's morning is stacked with all the good stuff:
+- 🍽️ **Breakfast** — fueling up before the big walk. Smart move!
+- 🚶 **Morning walk** — 20 minutes of tail-wagging adventure awaits!
+- 💊 **Vitamins** — keeping that golden coat shiny and those joints happy!
+
+Evening is equally pawsome:
+- 🌙 **Evening walk** — perfect wind-down energy burner!
+- 🍽️ **Dinner** — well deserved after a great day!
+
+✨ **Pawsome tip:** Golden Retrievers love a little mental challenge — try hiding kibble in a snuffle mat during breakfast for extra enrichment!
+🏆 **Confidence Score: 5/5** — This schedule is chef's kiss!
+
+---
+EXAMPLE 2:
+Pet: Luna (Cat)
+Schedule: Early Morning: Breakfast (10min), Litter box (10min) | Conflict: Evening overbooked
+
+Response:
+🐱 **Luna's Daily Rundown — Almost purrfect!**
+
+Morning routine is on point:
+- 🍽️ **Breakfast** — Luna approves (as if she'd let you forget)!
+- ✂️ **Litter box cleaning** — fresh and fancy, just how Luna likes it!
+
+⚠️ **Uh oh, schedule hiccup!** The evening is a little overbooked. Luna suggests moving one task to the afternoon slot. She's very particular about these things.
+
+✨ **Pawsome tip:** A quick 10-minute play session before bed helps Luna wind down!
+🏆 **Confidence Score: 3/5** — Fix that evening conflict and you're golden!
+
+---
+Always follow this exact structure and tone in your responses."""
+
+
+def _load_few_shot_examples() -> str:
+    """Load few-shot examples from the guidelines file if available."""
+    path = GUIDELINES_DIR / "few_shot_examples.md"
+    if path.exists():
+        logging.info("Few-shot: loaded examples from few_shot_examples.md")
+        return path.read_text(encoding="utf-8")
+    logging.warning("Few-shot: examples file not found — using inline examples only")
+    return ""
+
+
+def generate_specialized_explanation(
+    pet: Pet,
+    daily: DailySchedule,
+    conflicts: list[str],
+) -> str:
+    """
+    Generate a fun and playful AI explanation using few-shot prompting.
+    Uses the specialized system prompt with inline examples to constrain tone and style.
+    """
+    client = anthropic.Anthropic()
+    schedule_text = _build_schedule_summary(daily)
+    conflict_text = "\n".join(conflicts) if conflicts else NO_CONFLICTS_MSG
+    safety = validate_schedule_safety(pet, daily)
+    safety_text = "\n".join(safety) if safety else "All safety checks passed."
+    breed_note = f" ({pet.breed})" if hasattr(pet, "breed") and pet.breed else ""
+
+    user_prompt = f"""Generate a fun PawPal+ schedule analysis for:
+
+Pet: {pet.name} ({pet.__class__.__name__}{breed_note})
+Schedule:
+{schedule_text}
+
+Conflicts: {conflict_text}
+Safety warnings: {safety_text}
+
+Follow the tone and format from the examples exactly."""
+
+    logging.info(f"Few-shot: generating specialized explanation for {pet.name}")
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=800,
+            system=FEW_SHOT_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        result = response.content[0].text
+        logging.info(f"Few-shot: specialized explanation generated for {pet.name}")
+        return result
+    except anthropic.APIError as e:
+        logging.error(f"Few-shot: API error — {e}")
+        return "Unable to generate specialized explanation at this time."
+
+
+def generate_baseline_explanation(
+    pet: Pet,
+    daily: DailySchedule,
+    conflicts: list[str],
+) -> str:
+    """
+    Generate a plain baseline explanation with no few-shot examples.
+    Used for comparison against the specialized version.
+    """
+    client = anthropic.Anthropic()
+    schedule_text = _build_schedule_summary(daily)
+    conflict_text = "\n".join(conflicts) if conflicts else "No conflicts detected."
+
+    user_prompt = f"""Analyze this pet care schedule for {pet.name} ({pet.__class__.__name__}):
+
+Schedule:
+{schedule_text}
+
+Conflicts: {conflict_text}
+
+Provide a brief analysis and confidence score from 1-5."""
+
+    logging.info(f"Baseline: generating plain explanation for {pet.name}")
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=500,
+            system="You are a pet care scheduling assistant. Be helpful and concise.",
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        return response.content[0].text
+    except anthropic.APIError as e:
+        logging.error(f"Baseline: API error — {e}")
+        return "Unable to generate baseline explanation at this time."
+
+
+
 STEP_PROMPTS = {
     "analyze": """You are PawPal+, a pet care scheduling assistant.
 
@@ -331,7 +476,7 @@ def run_agentic_chain(
     schedule_text = _build_schedule_summary(daily)
     day_name = daily.date.strftime("%A")
     conflicts = scheduler.detect_conflicts(pet, day_name)
-    conflict_text = "\n".join(conflicts) if conflicts else "No conflicts detected."
+    conflict_text = "\n".join(conflicts) if conflicts else NO_CONFLICTS_MSG
     availability_text = _build_availability_summary(pet.owner)
 
     steps = {}
