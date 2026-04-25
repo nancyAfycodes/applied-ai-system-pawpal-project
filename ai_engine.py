@@ -1,7 +1,7 @@
 import json
 import logging
-import os
-from datetime import datetime
+import re
+from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -42,28 +42,103 @@ def _append_decision_log(entry: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# RAG — Retrieval
+# RAG — Retrieval helpers
 # ---------------------------------------------------------------------------
 GUIDELINES_DIR = Path("guidelines")
 
+SEASONAL_NOTES = {
+    "summer": "⚠️ It's summer — ensure walks are scheduled before 8am or after 6pm to avoid heat. Add a midday hydration check.",
+    "spring": "🌱 Spring shedding season is active — consider increasing grooming frequency this week.",
+    "fall":   "🍂 Fall is a great time for longer walks — cooler temperatures support extended outdoor activity.",
+    "winter": "❄️ Winter safety reminder — check paws after outdoor walks for ice or salt irritation.",
+}
+
+
+def _get_current_season() -> str:
+    """Return the current season based on the month."""
+    month = date.today().month
+    if month in (3, 4, 5):
+        return "spring"
+    if month in (6, 7, 8):
+        return "summer"
+    if month in (9, 10, 11):
+        return "fall"
+    return "winter"
+
+
+def _normalize_breed(breed: str) -> str:
+    """Normalize breed name to a filename-safe string."""
+    return breed.lower().strip().replace(" ", "_").replace("-", "_")
+
+
+def _build_schedule_summary(daily: DailySchedule) -> str:
+    """Build a plain text summary of scheduled tasks per slot."""
+    lines = []
+    for slot, tasks in daily.time_slots.items():
+        if tasks:
+            task_list = ", ".join(t.name for t in tasks)
+            lines.append(f"- {slot.replace('_', ' ').title()}: {task_list}")
+    return "\n".join(lines) if lines else "No tasks scheduled."
+
+
+def _build_breed_line(pet: Pet) -> str:
+    """Return breed source line for the sources section."""
+    if hasattr(pet, "breed") and pet.breed:
+        return f"- ✅ Breed-specific guidelines ({pet.breed})"
+    return "- ℹ️ No breed specified — base guidelines used"
+
 
 def retrieve_guidelines(pet: Pet) -> str:
-    """Retrieve the relevant care guidelines markdown file based on pet type.
-    Returns the file contents as a string, or a fallback message if not found."""
+    """
+    Enhanced RAG retriever — merges up to three sources:
+    1. Base pet care guidelines (dog_care.md or cat_care.md)
+    2. Breed-specific guidelines (if available)
+    3. Seasonal care guidelines (based on current month)
+    Returns combined context string with source labels.
+    """
+    sources = []
+
+    # Source 1 — base pet guidelines
     if isinstance(pet, Dog):
-        filename = "dog_care.md"
+        base_file = "dog_care.md"
     elif isinstance(pet, Cat):
-        filename = "cat_care.md"
+        base_file = "cat_care.md"
     else:
-        filename = f"{pet.__class__.__name__.lower()}_care.md"
+        base_file = f"{pet.__class__.__name__.lower()}_care.md"
 
-    filepath = GUIDELINES_DIR / filename
-    if filepath.exists():
-        logging.info(f"RAG: retrieved guidelines from {filename}")
-        return filepath.read_text(encoding="utf-8")
+    base_path = GUIDELINES_DIR / base_file
+    if base_path.exists():
+        sources.append(("Base Care Guidelines", base_path.read_text(encoding="utf-8")))
+        logging.info(f"RAG: retrieved base guidelines from {base_file}")
+    else:
+        sources.append(("Base Care Guidelines", f"No specific guidelines found for {pet.__class__.__name__}."))
+        logging.warning(f"RAG: no base guidelines found for {pet.__class__.__name__}")
 
-    logging.warning(f"RAG: no guidelines found for {pet.__class__.__name__}")
-    return f"No specific care guidelines found for {pet.__class__.__name__}. Use general best practices."
+    # Source 2 — breed-specific guidelines
+    if hasattr(pet, "breed") and pet.breed:
+        breed_file = f"{_normalize_breed(pet.breed)}.md"
+        breed_path = GUIDELINES_DIR / "breeds" / breed_file
+        if breed_path.exists():
+            sources.append(("Breed-Specific Guidelines", breed_path.read_text(encoding="utf-8")))
+            logging.info(f"RAG: retrieved breed guidelines from {breed_file}")
+        else:
+            logging.info(f"RAG: no breed guidelines found for {pet.breed} — skipping")
+
+    # Source 3 — seasonal guidelines
+    season = _get_current_season()
+    season_path = GUIDELINES_DIR / "seasonal" / f"{season}.md"
+    if season_path.exists():
+        sources.append(("Seasonal Care Guidelines", season_path.read_text(encoding="utf-8")))
+        logging.info(f"RAG: retrieved seasonal guidelines for {season}")
+    else:
+        logging.warning(f"RAG: no seasonal guidelines found for {season}")
+
+    # Merge all sources
+    merged = "\n\n---\n\n".join(
+        f"## {label}\n{content}" for label, content in sources
+    )
+    logging.info(f"RAG: merged {len(sources)} source(s) for {pet.name}")
+    return merged
 
 
 # ---------------------------------------------------------------------------
@@ -110,18 +185,19 @@ def _build_prompt(
 # ---------------------------------------------------------------------------
 def _mock_response(pet: Pet, daily: DailySchedule, conflicts: list[str]) -> str:
     """Return a realistic mock AI explanation for testing without API credits."""
-    slot_summary = []
-    for slot, tasks in daily.time_slots.items():
-        if tasks:
-            task_list = ", ".join(t.name for t in tasks)
-            slot_summary.append(f"- {slot.replace('_', ' ').title()}: {task_list}")
-    schedule_text = "\n".join(slot_summary) if slot_summary else "No tasks scheduled."
+    season = _get_current_season()
+    breed_note = f" ({pet.breed})" if hasattr(pet, "breed") and pet.breed else ""
+    schedule_text = _build_schedule_summary(daily)
+    seasonal_note = SEASONAL_NOTES.get(season, "")
+    breed_line = _build_breed_line(pet)
 
     conflict_note = ""
     if conflicts:
         conflict_note = f"\n\n⚠️ Conflict detected: {conflicts[0]} I recommend spreading tasks across additional time slots to resolve this."
 
-    return f"""## PawPal+ Schedule Analysis for {pet.name} ({pet.__class__.__name__})
+    pet_type = "dogs" if isinstance(pet, Dog) else "cats"
+
+    return f"""## PawPal+ Schedule Analysis for {pet.name} ({pet.__class__.__name__}{breed_note})
 
 ### Schedule Review
 {schedule_text}
@@ -129,15 +205,23 @@ def _mock_response(pet: Pet, daily: DailySchedule, conflicts: list[str]) -> str:
 ### Alignment with Care Guidelines
 The current schedule covers the essential care needs for {pet.name}. Here's a quick review:
 
-- **Feeding tasks** are correctly placed in the morning and evening slots, which aligns with the twice-daily feeding guideline for adult {'dogs' if isinstance(pet, Dog) else 'cats'}.
+- **Feeding tasks** are correctly placed in the morning and evening slots, which aligns with the twice-daily feeding guideline for adult {pet_type}.
 - **Exercise tasks** are well distributed across the day, supporting physical and mental wellbeing.
 - **Medication/supplement tasks** are scheduled in the morning, which is the recommended time for consistency and absorption.
 {conflict_note}
+
+### Seasonal Consideration ({season.title()})
+{seasonal_note}
 
 ### Suggestions
 - Consider adding an enrichment or playtime task in the afternoon slot if time allows.
 - Ensure fresh water is always available alongside feeding tasks.
 - Keep task times consistent day-to-day to support {pet.name}'s routine and reduce anxiety.
+
+### Sources Retrieved
+- ✅ Base {pet.__class__.__name__} care guidelines
+{breed_line}
+- ✅ {season.title()} seasonal care guidelines
 
 ### Confidence Score
 Based on the schedule's alignment with care guidelines: **4/5**
@@ -222,26 +306,23 @@ def generate_ai_explanation(
             if retries > max_retries:
                 explanation = "Unable to generate AI explanation at this time. Please check your API connection and try again."
 
-        # If conflicts detected and first attempt done, refine
         if conflict_warning and retries == 1:
             logging.info(f"Agentic loop: conflict detected, retrying with revision prompt for {pet.name}")
 
         retries += 1
 
-    # Extract confidence score from response
     confidence = _extract_confidence(explanation)
 
-    # Log decision
     log_entry = {
-        "timestamp":      datetime.now().isoformat(),
-        "pet":            pet.name,
-        "species":        pet.__class__.__name__,
-        "day":            day_name,
-        "tasks_scheduled":len(daily.tasks),
-        "conflicts":      conflicts,
-        "retries":        retries,
-        "confidence":     confidence,
-        "success":        success,
+        "timestamp":       datetime.now().isoformat(),
+        "pet":             pet.name,
+        "species":         pet.__class__.__name__,
+        "day":             day_name,
+        "tasks_scheduled": len(daily.tasks),
+        "conflicts":       conflicts,
+        "retries":         retries,
+        "confidence":      confidence,
+        "success":         success,
     }
     _append_decision_log(log_entry)
     logging.info(f"Decision logged for {pet.name} — confidence: {confidence}/5")
@@ -256,7 +337,6 @@ def generate_ai_explanation(
 
 def _extract_confidence(text: str) -> int:
     """Extract the confidence score (1-5) from Claude's response text."""
-    import re
     matches = re.findall(r"\b([1-5])\s*(?:/\s*5|out of 5)?", text[-300:])
     if matches:
         return int(matches[-1])
@@ -267,10 +347,7 @@ def _extract_confidence(text: str) -> int:
 # Guardrails
 # ---------------------------------------------------------------------------
 def validate_schedule_safety(pet: Pet, daily: DailySchedule) -> list[str]:
-    """
-    Basic guardrails — check the schedule for unsafe patterns.
-    Returns a list of safety warnings.
-    """
+    """Check the schedule for unsafe patterns and return a list of warnings."""
     warnings = []
     all_tasks = daily.tasks
 
