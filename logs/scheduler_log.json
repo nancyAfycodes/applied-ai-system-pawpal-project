@@ -25,5 +25,19 @@
     "confidence": 4,
     "success": true,
     "mock": true
+  },
+  {
+    "timestamp": "2026-04-25T13:29:37.438438",
+    "pet": "Gucci",
+    "species": "Dog",
+    "day": "Saturday",
+    "tasks_scheduled": 8,
+    "conflicts": [
+      "\u26a0 Conflict in 'evening' for Gucci: 70 min of tasks (Evening walk, Dinner, Vitamins) exceeds 60 min available."
+    ],
+    "retries": 0,
+    "confidence": 4,
+    "success": true,
+    "mock": true
   }
 ]

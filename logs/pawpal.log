@@ -9,3 +9,8 @@
 2026-04-16 10:57:50,242 | INFO | Decision logged for Gucci — confidence: 0/5
 2026-04-16 11:21:51,651 | INFO | RAG: retrieved guidelines from dog_care.md
 2026-04-16 11:21:51,694 | INFO | Mock mode: returning mock response for Gucci
+2026-04-25 13:29:37,352 | INFO | RAG: retrieved base guidelines from dog_care.md
+2026-04-25 13:29:37,421 | INFO | RAG: retrieved breed guidelines from golden_retriever.md
+2026-04-25 13:29:37,436 | WARNING | RAG: no seasonal guidelines found for spring
+2026-04-25 13:29:37,436 | INFO | RAG: merged 2 source(s) for Gucci
+2026-04-25 13:29:37,436 | INFO | Mock mode: returning mock response for Gucci
