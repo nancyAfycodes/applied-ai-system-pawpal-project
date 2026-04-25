@@ -9,7 +9,8 @@ Run with: py evaluate.py
 """
 from datetime import date
 from pawpal_system import Owner, Dog, Cat, Task, Scheduler
-from ai_engine import generate_ai_explanation, validate_schedule_safety
+from ai_engine import generate_ai_explanation, validate_schedule_safety, \
+    generate_specialized_explanation, generate_baseline_explanation
 
 # ---------------------------------------------------------------------------
 # Scenario builder helpers
@@ -168,5 +169,46 @@ def main():
     print(f"\n  Overall: {'✅ System reliable' if passed == total else '⚠️ Review failed scenarios'}\n")
 
 
+def compare_outputs():
+    """
+    Compare baseline vs specialized (few-shot) AI output for the same schedule.
+    Demonstrates measurable difference in tone and style.
+    """
+    print("\n" + "=" * 65)
+    print("  🔬 Few-Shot Specialization Comparison")
+    print("=" * 65)
+    print("  NOTE: Requires real API credits (MOCK_MODE = False)")
+    print("=" * 65)
+
+    today = date.today().strftime("%A")
+    owner = make_owner("Alex", {today: {"early_morning": 60, "evening": 60}})
+    dog = Dog(name="Buddy", age=3, owner=owner, breed="Golden Retriever")
+    dog.tasks = [
+        Task("Breakfast",    "eating",    15, "high",   "early_morning", "daily"),
+        Task("Morning walk", "exercise",  20, "high",   "early_morning", "daily"),
+        Task("Vitamins",     "routine_med", 5, "medium","early_morning", "daily"),
+        Task("Dinner",       "eating",    15, "high",   "evening",       "daily"),
+    ]
+    scheduler = Scheduler(owner=owner, pets=[dog])
+    scheduler.flagged_tasks = []
+    daily = scheduler.generate_daily_schedule_for_pet(dog, date.today())
+    conflicts = scheduler.detect_conflicts(dog, today)
+
+    print("\n  📝 BASELINE (no few-shot examples):")
+    print("-" * 65)
+    baseline = generate_baseline_explanation(dog, daily, conflicts)
+    print(baseline)
+
+    print("\n  🐾 SPECIALIZED (few-shot prompted):")
+    print("-" * 65)
+    specialized = generate_specialized_explanation(dog, daily, conflicts)
+    print(specialized)
+
+    print("\n" + "=" * 65)
+    print("  Comparison complete — review tone and structure differences above.")
+    print("=" * 65)
+
+
 if __name__ == "__main__":
     main()
+    compare_outputs()
