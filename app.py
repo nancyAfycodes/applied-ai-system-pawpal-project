@@ -32,6 +32,7 @@ st.subheader("Owner & Pet Info")
 owner_name = st.text_input("Owner name", value="Jordan")
 pet_name = st.text_input("Pet name", value="Mochi")
 species = st.selectbox("Species", ["dog", "cat"])
+breed = st.text_input("Breed (optional)", value="")
 
 st.markdown("#### Owner Availability (minutes per slot)")
 col1, col2, col3, col4 = st.columns(4)
@@ -66,13 +67,13 @@ if st.button("Save owner & pet"):
 
     # Create Pet
     if species == "dog":
-        pet = Dog(name=pet_name, age=0, owner=owner)
+        pet = Dog(name=pet_name, age=0, owner=owner, breed=breed)
     else:
-        pet = Cat(name=pet_name, age=0, owner=owner)
+        pet = Cat(name=pet_name, age=0, owner=owner, breed=breed)
 
     st.session_state.pets = [pet]
     st.session_state.tasks = []
-    st.success(f"Saved! Owner: {owner_name} | Pet: {pet_name} ({species})")
+    st.success(f"Saved! Owner: {owner_name} | Pet: {pet_name} ({species}){f' | Breed: {breed}' if breed else ''}")
 
 st.divider()
 
