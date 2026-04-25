@@ -230,30 +230,180 @@ Based on the schedule's alignment with care guidelines: **4/5**
 
 
 # ---------------------------------------------------------------------------
-# Agentic loop
+# Agentic chain steps
 # ---------------------------------------------------------------------------
+STEP_PROMPTS = {
+    "analyze": """You are PawPal+, a pet care scheduling assistant.
+
+## Pet Care Guidelines (retrieved)
+{guidelines}
+
+## Today's Schedule for {pet_name} ({species})
+{schedule}
+
+## Step 1 — Analyze Schedule Gaps
+Review the schedule against the care guidelines above.
+List any missing tasks, misplaced tasks, or gaps in care coverage.
+Be concise — use bullet points only. Do not suggest fixes yet.""",
+
+    "propose": """You are PawPal+, a pet care scheduling assistant.
+
+## Analysis from Step 1
+{analysis}
+
+## Step 2 — Propose Adjustments
+Based on the analysis above, suggest specific task adjustments.
+For each suggestion, state: what to change, which time slot, and why.
+Be concise — use bullet points only.""",
+
+    "validate": """You are PawPal+, a pet care scheduling assistant.
+
+## Proposed Adjustments from Step 2
+{proposal}
+
+## Owner Availability
+{availability}
+
+## Conflicts Detected
+{conflicts}
+
+## Step 3 — Validate Adjustments
+Review each proposed adjustment against the owner's availability and detected conflicts.
+Mark each suggestion as VALID or INVALID with a one-line reason.
+Be concise — use bullet points only.""",
+
+    "explain": """You are PawPal+, a pet care scheduling assistant.
+
+## Validated Plan from Step 3
+{validation}
+
+## Step 4 — Final Explanation
+Write a friendly, concise summary for the pet owner explaining:
+1. What the schedule covers well
+2. What was adjusted and why
+3. Any remaining conflicts or concerns
+End with a confidence score (1-5) based on schedule quality.""",
+}
+
+
+def _run_step(client, prompt: str, step_name: str, pet_name: str) -> str:
+    """Run a single agentic step and return the response text."""
+    logging.info(f"Agentic chain: running step '{step_name}' for {pet_name}")
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=500,
+            system="You are PawPal+, a concise and knowledgeable pet care scheduling assistant.",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        result = response.content[0].text
+        logging.info(f"Agentic chain: step '{step_name}' completed for {pet_name}")
+        return result
+    except anthropic.APIError as e:
+        logging.error(f"Agentic chain: step '{step_name}' failed — {e}")
+        return f"Step '{step_name}' could not be completed due to an API error."
+
+
+def _build_availability_summary(owner) -> str:
+    """Summarize owner availability as a readable string."""
+    today = date.today().strftime("%A")
+    slots = owner.availability.get(today, {})
+    if not slots:
+        return "No availability data for today."
+    return ", ".join(f"{slot}: {mins} min" for slot, mins in slots.items())
+
+
+def run_agentic_chain(
+    pet: Pet,
+    daily: DailySchedule,
+    scheduler: Scheduler,
+    guidelines: str,
+) -> dict:
+    """
+    Multi-step agentic workflow with observable intermediate steps.
+    Step 1: Analyze schedule gaps
+    Step 2: Propose adjustments
+    Step 3: Validate against availability and conflicts
+    Step 4: Produce final explanation
+    Returns dict with keys: steps, explanation, confidence
+    """
+    client = anthropic.Anthropic()
+    schedule_text = _build_schedule_summary(daily)
+    day_name = daily.date.strftime("%A")
+    conflicts = scheduler.detect_conflicts(pet, day_name)
+    conflict_text = "\n".join(conflicts) if conflicts else "No conflicts detected."
+    availability_text = _build_availability_summary(pet.owner)
+
+    steps = {}
+
+    # Step 1 — Analyze
+    p1 = STEP_PROMPTS["analyze"].format(
+        guidelines=guidelines,
+        pet_name=pet.name,
+        species=pet.__class__.__name__,
+        schedule=schedule_text,
+    )
+    steps["Step 1: Analyze Schedule Gaps"] = _run_step(client, p1, "analyze", pet.name)
+
+    # Step 2 — Propose
+    p2 = STEP_PROMPTS["propose"].format(analysis=steps["Step 1: Analyze Schedule Gaps"])
+    steps["Step 2: Propose Adjustments"] = _run_step(client, p2, "propose", pet.name)
+
+    # Step 3 — Validate
+    p3 = STEP_PROMPTS["validate"].format(
+        proposal=steps["Step 2: Propose Adjustments"],
+        availability=availability_text,
+        conflicts=conflict_text,
+    )
+    steps["Step 3: Validate Adjustments"] = _run_step(client, p3, "validate", pet.name)
+
+    # Step 4 — Final explanation
+    p4 = STEP_PROMPTS["explain"].format(validation=steps["Step 3: Validate Adjustments"])
+    steps["Step 4: Final Explanation"] = _run_step(client, p4, "explain", pet.name)
+
+    explanation = steps["Step 4: Final Explanation"]
+    confidence = _extract_confidence(explanation)
+
+    # Log the full chain
+    log_entry = {
+        "timestamp":       datetime.now().isoformat(),
+        "pet":             pet.name,
+        "species":         pet.__class__.__name__,
+        "day":             day_name,
+        "tasks_scheduled": len(daily.tasks),
+        "conflicts":       conflicts,
+        "steps_completed": len(steps),
+        "confidence":      confidence,
+        "success":         True,
+        "mock":            False,
+        "mode":            "agentic_chain",
+    }
+    _append_decision_log(log_entry)
+    logging.info(f"Agentic chain: completed all 4 steps for {pet.name} — confidence: {confidence}/5")
+
+    return {
+        "steps":       steps,
+        "explanation": explanation,
+        "confidence":  confidence,
+        "flagged":     conflicts,
+    }
+
+
+
 def generate_ai_explanation(
     pet: Pet,
     daily: DailySchedule,
     scheduler: Scheduler,
-    max_retries: int = 2,
 ) -> dict:
     """
-    Agentic workflow:
-    1. Retrieve guidelines (RAG)
-    2. Send schedule + guidelines to Claude
-    3. Check for conflicts
-    4. If conflicts found, send back to Claude for revision
-    5. Log the final decision
-    Returns a dict with keys: explanation, confidence, retries, flagged
+    Agentic workflow dispatcher.
+    In MOCK_MODE: returns a realistic mock response.
+    Otherwise: runs the full multi-step agentic chain.
+    Returns a dict with keys: explanation, confidence, retries, flagged, steps (optional).
     """
-    client = anthropic.Anthropic()
     guidelines = retrieve_guidelines(pet)
-
-    # Check for conflicts before first call
     day_name = daily.date.strftime("%A")
     conflicts = scheduler.detect_conflicts(pet, day_name)
-    conflict_warning = "\n".join(conflicts) if conflicts else None
 
     # Use mock response if MOCK_MODE is enabled
     if MOCK_MODE:
@@ -278,61 +428,11 @@ def generate_ai_explanation(
             "confidence":  confidence,
             "retries":     0,
             "flagged":     conflicts,
+            "steps":       {},
         }
 
-    explanation = ""
-    retries = 0
-    success = False
-
-    while retries <= max_retries:
-        prompt = _build_prompt(pet, daily, guidelines, conflict_warning)
-        logging.info(f"Agentic loop: attempt {retries + 1} for {pet.name}")
-
-        try:
-            response = client.messages.create(
-                model="claude-sonnet-4-5",
-                max_tokens=1000,
-                system="You are PawPal+, a caring and knowledgeable pet care scheduling assistant. Always be concise, practical, and supportive.",
-                messages=[{"role": "user", "content": prompt}],
-            )
-            explanation = response.content[0].text
-            success = True
-            logging.info(f"Agentic loop: success on attempt {retries + 1} for {pet.name}")
-            break
-
-        except anthropic.APIError as e:
-            logging.error(f"Agentic loop: API error on attempt {retries + 1} — {e}")
-            retries += 1
-            if retries > max_retries:
-                explanation = "Unable to generate AI explanation at this time. Please check your API connection and try again."
-
-        if conflict_warning and retries == 1:
-            logging.info(f"Agentic loop: conflict detected, retrying with revision prompt for {pet.name}")
-
-        retries += 1
-
-    confidence = _extract_confidence(explanation)
-
-    log_entry = {
-        "timestamp":       datetime.now().isoformat(),
-        "pet":             pet.name,
-        "species":         pet.__class__.__name__,
-        "day":             day_name,
-        "tasks_scheduled": len(daily.tasks),
-        "conflicts":       conflicts,
-        "retries":         retries,
-        "confidence":      confidence,
-        "success":         success,
-    }
-    _append_decision_log(log_entry)
-    logging.info(f"Decision logged for {pet.name} — confidence: {confidence}/5")
-
-    return {
-        "explanation": explanation,
-        "confidence":  confidence,
-        "retries":     retries,
-        "flagged":     conflicts,
-    }
+    # Run full agentic chain
+    return run_agentic_chain(pet, daily, scheduler, guidelines)
 
 
 def _extract_confidence(text: str) -> int:
