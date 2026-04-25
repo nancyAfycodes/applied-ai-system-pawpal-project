@@ -1,8 +1,15 @@
-# PawPal+ (Module 2 Project)
+# PawPal+ AI 🐾
+> A smart, AI-integrated pet care scheduling assistant built with Python, Streamlit, and the Anthropic Claude API.
 
-A smart pet care management system that helps owners stay consistent with daily pet care routines.
+---
 
-## Scenario
+## 📌 Original Project
+
+PawPal+ was originally developed in Modules 1–3 as a rule-based pet care scheduling system. Its original goals were to help a busy pet owner track daily care tasks (walks, feeding, medications, enrichment, grooming) for their dog or cat, generate a prioritized daily schedule based on owner availability, and detect scheduling conflicts. The system was built using Python OOP principles with a Streamlit UI and a CLI demo script.
+
+---
+
+## 🐾 Scenario
 
 A busy pet owner needs help staying consistent with pet care. They want an assistant that can:
 
@@ -10,17 +17,28 @@ A busy pet owner needs help staying consistent with pet care. They want an assis
 - Consider constraints (time available, priority, owner preferences)
 - Produce a daily plan and explain why it chose that plan
 
-## What was built
+---
+
+## ✅ What Was Built
 
 The final app:
 
-- Lets a user enter basic owner + pet info
-- Lets a user add/edit tasks (duration + priority at minimum)
-- Generates a daily schedule/plan based on constraints and priorities
-- Displays the plan clearly and explains the reasoning
+- Lets a user enter basic owner + pet info including breed
+- Lets a user add, edit, and delete tasks (duration, priority, category, time slot)
+- Generates a daily schedule per pet based on constraints and priorities
+- Displays the plan clearly with emoji indicators and priority badges
+- Explains scheduling decisions using AI-powered analysis
+- Retrieves breed-specific and seasonal care guidelines via RAG
+- Detects and flags scheduling conflicts with AI review
 - Includes tests for the most important scheduling behaviors
 
-## Getting started
+---
+
+## ⚙️ Getting Started
+
+### Prerequisites
+- Python 3.13+
+- An Anthropic API key with credits ([console.anthropic.com](https://console.anthropic.com))
 
 ### Setup
 
@@ -30,52 +48,135 @@ py -m venv .venv
 py -m pip install -r requirements.txt
 ```
 
-### Suggested workflow
+### Set your Anthropic API key (Windows)
+```bash
+# Permanent — recommended
+# Set via System Environment Variables → User Variables → New
+# Variable name: ANTHROPIC_API_KEY
+# Variable value: your key
 
-1. Read the scenario carefully and identify requirements and edge cases.
-2. Draft a UML diagram (classes, attributes, methods, relationships).
-3. Convert UML into Python class stubs (no logic yet).
-4. Implement scheduling logic in small increments.
-5. Add tests to verify key behaviors.
-6. Connect your logic to the Streamlit UI in `app.py`.
-7. Refine UML so it matches what you actually built.
-
-## Project structure
-
-```
-pawpal_plus/
-├── pawpal_system.py   # Core backend logic (OOP classes and scheduling)
-├── app.py             # Streamlit UI
-├── main.py            # CLI demo script
-├── conftest.py        # pytest configuration
-├── requirements.txt   # Project dependencies
-└── tests/
-    ├── __init__.py
-    └── test_pawpal.py # Automated test suite
+# Verify it's working
+py -c "import os; print(os.environ.get('ANTHROPIC_API_KEY', 'NOT FOUND'))"
 ```
 
-## Running the app
-
+### Run the Streamlit app
 ```bash
 py -m streamlit run app.py
 ```
 
-## Running the CLI demo
-
+### Run the CLI demo
 ```bash
 py main.py
 ```
 
-## Smarter scheduling
+### Run the evaluation script
+```bash
+py evaluate.py
+```
+
+### Run the test suite
+```bash
+py -m pytest
+```
+
+> **Note:** If you don't have API credits, set `MOCK_MODE = True` in `ai_engine.py` to use realistic mock responses for testing.
+
+---
+
+## 🏗️ System Architecture
+
+### Initial UML Design
+![Initial UML](assets/uml_initial.png)
+
+### Final UML Design
+![Final UML](assets/uml_final.png)
+
+> Both diagrams were generated using [Mermaid](https://mermaid.live).
+> See `uml_diagrams.docx` for the full Mermaid code to recreate them.
+
+### System Flow Diagram
+![System Flow](assets/system_flow.png)
+
+---
+
+## 🤖 AI Features
+
+| Feature | What It Does |
+|---------|-------------|
+| 🔍 RAG | Retrieves up to 3 care guideline sources before every AI response |
+| 🤖 Agentic Workflow | 4-step reasoning chain: Analyze → Propose → Validate → Explain |
+| 🎨 Few-Shot Specialization | Constrains AI tone to fun and playful using curated examples |
+| 🛡️ Guardrails | Safety checks for missing feeding tasks, unscheduled medications, slot overload |
+| 📋 Logging | Every AI decision logged to `logs/pawpal.log` and `logs/scheduler_log.json` |
+
+### RAG Knowledge Base
+```
+guidelines/
+├── dog_care.md
+├── cat_care.md
+├── breeds/
+│   ├── golden_retriever.md
+│   ├── bichon_frise.md
+│   ├── pomeranian.md
+│   └── persian.md
+└── seasonal/
+    ├── spring.md
+    ├── summer.md
+    ├── fall.md
+    └── winter.md
+```
+
+---
+
+## 🧠 Smarter Scheduling
 
 PawPal+ includes several intelligent scheduling features:
 
-- **Sorting**: Tasks are sorted by natural day order (early morning → lunch break → afternoon → evening) using `sort_by_time()`
-- **Filtering**: Tasks can be filtered by completion status or pet name using `filter_tasks()`
-- **Recurring tasks**: Marking a daily or weekly task complete automatically generates the next occurrence using Python's `timedelta`
-- **Conflict detection**: `detect_conflicts()` checks if a time slot is overbooked and returns a warning message rather than crashing
+- **Sorting**: Tasks sorted by natural day order (early morning → lunch break → afternoon → evening)
+- **Filtering**: Tasks filtered by completion status or pet name
+- **Recurring tasks**: Daily/weekly tasks auto-generate next occurrence using Python's `timedelta`
+- **Conflict detection**: Slot overflow flagged with warning rather than crashing
+- **Per-pet schedules**: Each pet gets an independent daily schedule based on owner availability
 
-## Testing PawPal+
+---
+
+## 🗂️ Project Structure
+
+```
+pawpal_plus/
+├── pawpal_system.py        # Core OOP scheduling logic
+├── ai_engine.py            # RAG, agentic loop, logging, guardrails
+├── app.py                  # Streamlit UI
+├── main.py                 # CLI demo script
+├── evaluate.py             # Reliability evaluation script
+├── conftest.py             # pytest configuration
+├── requirements.txt        # Project dependencies
+├── guidelines/
+│   ├── dog_care.md
+│   ├── cat_care.md
+│   ├── few_shot_examples.md
+│   ├── breeds/
+│   └── seasonal/
+├── logs/
+│   ├── pawpal.log
+│   └── scheduler_log.json
+├── assets/
+│   ├── uml_initial.png
+│   ├── uml_final.png
+│   ├── system_flow.png
+│   └── pawpal_demo.gif
+├── tests/
+│   ├── __init__.py
+│   └── test_pawpal.py
+├── reflection.md
+├── model_card.md
+├── evaluation.md
+└── uml_diagrams.docx
+```
+
+---
+
+## 🧪 Testing PawPal+
 
 Run the full test suite with:
 
@@ -83,7 +184,7 @@ Run the full test suite with:
 py -m pytest
 ```
 
-### What the tests cover
+### What the Tests Cover
 
 | Test | Description |
 |------|-------------|
@@ -95,34 +196,87 @@ py -m pytest
 | `test_sort_by_time` | Tasks returned in natural day order |
 | `test_pet_with_no_tasks` | Pet with no tasks produces no errors or conflicts |
 
-## System Architecture
+### Evaluation Results
 
-### Initial UML Design
-![Initial UML](uml_initial.png)
+```
+5/5 scenarios passed
+Avg confidence: 4.0/5
+Conflicts detected: 1 ✅
+Safety warnings: 2 ✅
+Logging: Active ✅
+Overall: System reliable ✅
+```
 
-### Final UML Design
-![Final UML](uml_final.png)
+---
 
-> Both diagrams were generated using [Mermaid](https://mermaid.live). 
-> See `uml_diagrams.docx` for the full Mermaid code to recreate them.
+## 📸 Demo
 
-## Demo (screen shot)
-![alt text](image.png)
-![alt text](image-1.png)
-![alt text](image-2.png)
-![alt text](image-3.png)
+### App Screenshots
+![Owner and Pet Info](assets/image.png)
+![Tasks Section](assets/image-1.png)
+![Schedule with Emojis](assets/image-4.png)
+![AI Schedule Analysis](assets/image-5.png)
 
-## Demo Update (screen shot)  - shows emojis associated with each task
-![alt text](image-6.png)
-![alt text](image-5.png)
-![alt text](image-4.png)
+### Live Walkthrough
+![PawPal+ Demo](assets/pawpal_demo.gif)
 
-### Confidence level
+> GIF shows: entering owner/pet info → adding tasks → generating schedule → AI explanation → conflict detection
 
-⭐⭐⭐⭐ (4/5) — Core scheduling behaviors are well covered. Future improvements include tests for multi-pet scheduling and the actual vs scheduled time tracking feature. Include a delete button for tasks entered erroneously. 
+---
 
-## Dependencies
+## 💡 Sample AI Interactions
 
-- `streamlit >= 1.30`
-- `pytest >= 7.0`
-- `tabulate>=0.9`
+### Example 1 — Happy path (no conflicts)
+**Input:** Gucci (Dog, Golden Retriever) | Breakfast, Morning walk, Vitamins in early morning
+**AI Output:** 4/5 confidence | Sources: base dog guidelines + Golden Retriever breed guidelines + Spring seasonal guidelines | Suggestion: add afternoon enrichment task
+
+### Example 2 — Conflict detected
+**Input:** Same pet with 70 min of evening tasks but only 60 min available
+**AI Output:** ⚠️ Conflict flagged | AI recommends spreading tasks to afternoon slot
+
+### Example 3 — Safety guardrail triggered
+**Input:** Pet with only exercise tasks, no feeding scheduled
+**AI Output:** ⚠️ Safety warning: no feeding tasks scheduled today
+
+---
+
+## ⚖️ Ethical Considerations
+
+- PawPal+ is a scheduling tool — it is **not** a substitute for professional veterinary advice
+- Always consult a licensed veterinarian for health-related decisions
+- Care guidelines are based on general best practices and may not apply to every individual animal
+- The system should not be used to plan care for exotic or legally prohibited animals
+
+---
+
+## 🔮 Future Improvements
+
+- Actual vs allocated time tracking with weekly adjustment graph
+- Pet type validation guardrail
+- More breed guidelines
+- Non-standard schedule support (shift work, flexible hours)
+- Multi-pet weekly view in a single session
+- Real API activation (`MOCK_MODE = False`) once credits are available
+
+---
+
+## ⭐ Confidence Level
+
+⭐⭐⭐⭐ (4/5) — Core scheduling and AI behaviors are well covered. Remaining gap is the actual vs allocated time tracking feature and real API integration.
+
+---
+
+## 📦 Dependencies
+
+```
+streamlit >= 1.30
+pytest >= 7.0
+tabulate >= 0.9
+anthropic >= 0.25
+```
+
+---
+
+## 👤 Author
+
+Built as part of the AI110 Module 2–4 capstone project.
