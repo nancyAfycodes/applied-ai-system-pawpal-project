@@ -39,5 +39,67 @@
     "confidence": 4,
     "success": true,
     "mock": true
+  },
+  {
+    "timestamp": "2026-04-25T14:00:24.141450",
+    "pet": "Buddy",
+    "species": "Dog",
+    "day": "Saturday",
+    "tasks_scheduled": 4,
+    "conflicts": [],
+    "retries": 0,
+    "confidence": 4,
+    "success": true,
+    "mock": true
+  },
+  {
+    "timestamp": "2026-04-25T14:00:24.187100",
+    "pet": "Max",
+    "species": "Dog",
+    "day": "Saturday",
+    "tasks_scheduled": 1,
+    "conflicts": [
+      "\u26a0 Conflict in 'early_morning' for Max: 45 min of tasks (Breakfast, Morning walk) exceeds 20 min available."
+    ],
+    "retries": 0,
+    "confidence": 4,
+    "success": true,
+    "mock": true
+  },
+  {
+    "timestamp": "2026-04-25T14:00:24.241256",
+    "pet": "Luna",
+    "species": "Cat",
+    "day": "Saturday",
+    "tasks_scheduled": 4,
+    "conflicts": [],
+    "retries": 0,
+    "confidence": 4,
+    "success": true,
+    "mock": true
+  },
+  {
+    "timestamp": "2026-04-25T14:00:24.263157",
+    "pet": "Rocky",
+    "species": "Dog",
+    "day": "Saturday",
+    "tasks_scheduled": 0,
+    "conflicts": [],
+    "retries": 0,
+    "confidence": 4,
+    "success": true,
+    "mock": true
+  },
+  {
+    "timestamp": "2026-04-25T14:00:24.287041",
+    "pet": "Bella",
+    "species": "Dog",
+    "day": "Saturday",
+    "tasks_scheduled": 2,
+    "conflicts": [],
+    "retries": 0,
+    "confidence": 4,
+    "success": true,
+    "mock": true
   }
 ]
