@@ -208,6 +208,13 @@ if st.button("Generate schedule"):
             for conflict in result["flagged"]:
                 st.markdown(f"- {conflict}")
 
+        # AI reasoning chain steps
+        if result.get("steps"):
+            st.markdown("**🔍 AI Reasoning Chain**")
+            for step_name, step_content in result["steps"].items():
+                with st.expander(step_name, expanded=False):
+                    st.markdown(step_content)
+
         # AI explanation expander
         with st.expander("📋 Full AI Explanation", expanded=True):
             st.markdown(result["explanation"])
