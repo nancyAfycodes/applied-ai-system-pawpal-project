@@ -13,7 +13,7 @@ PawPal+ was originally developed in Modules 1–3 as a rule-based pet care sched
 
 A busy pet owner needs help staying consistent with pet care. They want an assistant that can:
 
-- Track pet care tasks (walks, feeding, meds, enrichment, grooming, etc.)
+- Track pet care tasks (walks, feeding, medications, vitamins, enrichment, grooming, etc.)
 - Consider constraints (time available, priority, owner preferences)
 - Produce a daily plan and explain why it chose that plan
 
@@ -242,8 +242,8 @@ Overall: System reliable ✅
 
 ## ⚖️ Ethical Considerations
 
-- PawPal+ is a scheduling tool — it is **not** a substitute for professional veterinary advice
-- Always consult a licensed veterinarian for health-related decisions
+- PawPal+ is a scheduling tool, it is **not** a substitute for professional veterinary advice
+- Always consult a licensed veterinarian for health-related issues
 - Care guidelines are based on general best practices and may not apply to every individual animal
 - The system should not be used to plan care for exotic or legally prohibited animals
 
