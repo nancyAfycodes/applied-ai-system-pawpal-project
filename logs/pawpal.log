@@ -40,3 +40,13 @@
 2026-04-25 14:00:25,793 | INFO | Few-shot: generating specialized explanation for Buddy
 2026-04-25 14:00:26,024 | INFO | HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 400 Bad Request"
 2026-04-25 14:00:26,025 | ERROR | Few-shot: API error — Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CaRAPEabK2qgaq6a8wtfJ'}
+2026-04-25 17:57:59,935 | INFO | RAG: retrieved base guidelines from dog_care.md
+2026-04-25 17:57:59,959 | INFO | RAG: no breed guidelines found for Golden Retriver — skipping
+2026-04-25 17:57:59,972 | WARNING | RAG: no seasonal guidelines found for spring
+2026-04-25 17:57:59,972 | INFO | RAG: merged 1 source(s) for Gucci
+2026-04-25 17:57:59,973 | INFO | Mock mode: returning mock response for Gucci
+2026-04-25 18:12:07,754 | INFO | RAG: retrieved base guidelines from dog_care.md
+2026-04-25 18:12:07,802 | INFO | RAG: retrieved breed guidelines from golden_retriever.md
+2026-04-25 18:12:07,804 | WARNING | RAG: no seasonal guidelines found for spring
+2026-04-25 18:12:07,804 | INFO | RAG: merged 2 source(s) for Gucci
+2026-04-25 18:12:07,804 | INFO | Mock mode: returning mock response for Gucci
