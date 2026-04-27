@@ -220,7 +220,7 @@ Overall: System reliable ✅
 ### Live Walkthrough
 ![PawPal+ Demo](assets/pawpal_demo.gif)
 
-> GIF shows: entering owner/pet info → adding tasks → generating schedule → AI explanation → conflict detection
+> Screenshot shows: entering owner/pet info → adding tasks → generating schedule → AI explanation → conflict detection
 
 ---
 
