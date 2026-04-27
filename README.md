@@ -218,7 +218,7 @@ Overall: System reliable ✅
 ![AI Schedule Analysis](assets/image-5.png)
 
 ### Live Walkthrough
-![PawPal+ Demo](assets/pawpal_demo.gif)
+![PawPal+ Demo](assets/pawpal_demo.pptx)
 
 > Screenshot shows: entering owner/pet info → adding tasks → generating schedule → AI explanation → conflict detection
 
