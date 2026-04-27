@@ -129,5 +129,43 @@
     "confidence": 4,
     "success": true,
     "mock": true
+  },
+  {
+    "timestamp": "2026-04-26T22:45:38.106854",
+    "pet": "Gucci",
+    "species": "Dog",
+    "day": "Sunday",
+    "tasks_scheduled": 7,
+    "conflicts": [
+      "\u26a0 Conflict in 'early_morning' for Gucci: 40 min of tasks (Morning walk, Breakfast, Daily vitamin) exceeds 30 min available."
+    ],
+    "retries": 0,
+    "confidence": 4,
+    "success": true,
+    "mock": true
+  },
+  {
+    "timestamp": "2026-04-26T23:04:52.321968",
+    "pet": "Mochi",
+    "species": "Dog",
+    "day": "Sunday",
+    "tasks_scheduled": 8,
+    "conflicts": [],
+    "retries": 0,
+    "confidence": 4,
+    "success": true,
+    "mock": true
+  },
+  {
+    "timestamp": "2026-04-26T23:20:35.226480",
+    "pet": "Poms",
+    "species": "Cat",
+    "day": "Sunday",
+    "tasks_scheduled": 7,
+    "conflicts": [],
+    "retries": 0,
+    "confidence": 4,
+    "success": true,
+    "mock": true
   }
 ]

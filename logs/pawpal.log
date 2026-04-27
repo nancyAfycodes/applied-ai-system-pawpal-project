@@ -50,3 +50,18 @@
 2026-04-25 18:12:07,804 | WARNING | RAG: no seasonal guidelines found for spring
 2026-04-25 18:12:07,804 | INFO | RAG: merged 2 source(s) for Gucci
 2026-04-25 18:12:07,804 | INFO | Mock mode: returning mock response for Gucci
+2026-04-26 22:45:38,036 | INFO | RAG: retrieved base guidelines from dog_care.md
+2026-04-26 22:45:38,088 | INFO | RAG: retrieved breed guidelines from golden_retriever.md
+2026-04-26 22:45:38,104 | WARNING | RAG: no seasonal guidelines found for spring
+2026-04-26 22:45:38,105 | INFO | RAG: merged 2 source(s) for Gucci
+2026-04-26 22:45:38,105 | INFO | Mock mode: returning mock response for Gucci
+2026-04-26 23:04:52,172 | INFO | RAG: retrieved base guidelines from dog_care.md
+2026-04-26 23:04:52,303 | INFO | RAG: retrieved breed guidelines from pomeranian.md
+2026-04-26 23:04:52,317 | WARNING | RAG: no seasonal guidelines found for spring
+2026-04-26 23:04:52,318 | INFO | RAG: merged 2 source(s) for Mochi
+2026-04-26 23:04:52,319 | INFO | Mock mode: returning mock response for Mochi
+2026-04-26 23:20:35,154 | INFO | RAG: retrieved base guidelines from cat_care.md
+2026-04-26 23:20:35,210 | INFO | RAG: retrieved breed guidelines from persian.md
+2026-04-26 23:20:35,220 | WARNING | RAG: no seasonal guidelines found for spring
+2026-04-26 23:20:35,222 | INFO | RAG: merged 2 source(s) for Poms
+2026-04-26 23:20:35,223 | INFO | Mock mode: returning mock response for Poms
